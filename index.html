@@ -290,6 +290,191 @@
         .highlight-col {
             background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%) !important;
         }
+
+
+        /* 드래그 앤 드롭 영역 스타일 */
+        .drag-drop-section {
+            padding: 0 5px;
+        }
+
+        .drop-zone-container, .message-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            transition: all 0.3s ease;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .drop-zone-content {
+            pointer-events: none;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        .drop-zone-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-subtext {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .message-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .copy-btn, .clear-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .copy-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .clear-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .message-area {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            background: #f8fafc;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .empty-message {
+            color: #9ca3af;
+            text-align: center;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 160px;
+        }
+
+        .message-content {
+            white-space: pre-line;
+        }
+
+        /* 드래그 가능한 셀 스타일 */
+        .data-cell.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg) scale(0.9);
+            z-index: 1000;
+        }
+
+        .data-cell[draggable="true"] {
+            cursor: grab;
+        }
+
+        .data-cell[draggable="true"]:active {
+            cursor: grabbing;
+        }
+
+        /* 애니메이션 */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes dropSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .drop-zone.drop-success {
+            animation: dropSuccess 0.6s ease;
+        }
     </style>
 </head>
 <body>
@@ -353,6 +538,35 @@
                 </table>
             </div>
         </div>
+        
+        <!-- 드래그 앤 드롭 기능 영역 -->
+        <div class="drag-drop-section mt-8 grid grid-cols-2 gap-6">
+            <!-- 좌측: 드롭 영역 -->
+            <div class="drop-zone-container">
+                <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">📩 담당교사 알림 대상</h3>
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon">📥</div>
+                        <div class="drop-zone-text">여기에 학생을 드래그하세요</div>
+                        <div class="drop-zone-subtext">규칙 위반이 많은 학생을 드래그해서 놓으면<br>담당교사 전달 메시지가 자동 생성됩니다</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 우측: 메시지 창 -->
+            <div class="message-container">
+                <div class="message-header">
+                    <h3 class="text-lg font-bold text-gray-800">📝 담당교사 전달 메시지</h3>
+                    <div class="message-controls">
+                        <button id="clearBtn" class="clear-btn">🗑️ 초기화</button>
+                        <button id="copyBtn" class="copy-btn">📋 복사</button>
+                    </div>
+                </div>
+                <div id="messageArea" class="message-area">
+                    <div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal for adding/editing student data -->
@@ -408,6 +622,7 @@
         </div>
     </div>
 
+
     <script>
         // Firebase 설정
         const firebaseConfig = {
@@ -438,6 +653,7 @@
             let tempCheckedItems = [];
             let currentStudentInfo = { grade: null, classNum: null, studentNum: null };
             let confirmCallback = () => {};
+            let messageList = [];
 
             const studentModal = document.getElementById('studentModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -460,6 +676,11 @@
             const confirmMessage = document.getElementById('confirmMessage');
             const confirmResetBtn = document.getElementById('confirmResetBtn');
             const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+            const dropZone = document.getElementById('dropZone');
+            const messageArea = document.getElementById('messageArea');
+            const copyBtn = document.getElementById('copyBtn');
+            const clearBtn = document.getElementById('clearBtn');
 
             const createChecklistItems = () => {
                 checklistItemsContainer.innerHTML = '';
@@ -601,6 +822,11 @@
                         studentBox.addEventListener('contextmenu', openHistoryModal);
                         studentBox.addEventListener('mouseenter', highlightRowCol);
                         studentBox.addEventListener('mouseleave', removeHighlight);
+                        
+                        // 드래그 기능 추가
+                        studentBox.setAttribute('draggable', 'true');
+                        studentBox.addEventListener('dragstart', handleDragStart);
+                        studentBox.addEventListener('dragend', handleDragEnd);
                         
                         td.appendChild(studentBox);
                         tr.appendChild(td);
@@ -850,6 +1076,150 @@
                 updateTableFromData(grade);
             };
 
+            // 드래그 앤 드롭 관련 함수들
+            const handleDragStart = (event) => {
+                const cell = event.currentTarget;
+                cell.classList.add('dragging');
+                
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                const key = grade + '-' + classNum + '-' + studentNum;
+                const violations = studentData[key] || [];
+                const count = violations.length;
+                
+                const dragData = {
+                    grade: grade,
+                    classNum: classNum,
+                    studentNum: studentNum,
+                    count: count
+                };
+                
+                event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                event.dataTransfer.effectAllowed = 'copy';
+            };
+
+            const handleDragEnd = (event) => {
+                event.currentTarget.classList.remove('dragging');
+            };
+
+            const handleDragOver = (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                dropZone.classList.add('drag-over');
+            };
+
+            const handleDragLeave = (event) => {
+                if (!dropZone.contains(event.relatedTarget)) {
+                    dropZone.classList.remove('drag-over');
+                }
+            };
+
+            const handleDrop = (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('drag-over');
+                dropZone.classList.add('drop-success');
+                
+                setTimeout(() => {
+                    dropZone.classList.remove('drop-success');
+                }, 600);
+
+                try {
+                    const dragData = JSON.parse(event.dataTransfer.getData('text/plain'));
+                    const { grade, classNum, studentNum, count } = dragData;
+                    
+                    const message = grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생이 약속이행서 ' + count + '장을 받았습니다.';
+                    messageList.push(message);
+                    updateMessageArea();
+                    
+                } catch (error) {
+                    console.error('드롭 데이터 처리 오류:', error);
+                }
+            };
+
+            const updateMessageArea = () => {
+                if (messageList.length === 0) {
+                    messageArea.innerHTML = '<div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>';
+                    copyBtn.disabled = true;
+                    clearBtn.disabled = true;
+                } else {
+                    const messageContent = messageList.join('\n');
+                    messageArea.innerHTML = '<div class="message-content">' + messageContent + '</div>';
+                    copyBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }
+            };
+
+            const handleCopy = async () => {
+                if (messageList.length === 0) return;
+                
+                const textToCopy = messageList.join('\n');
+                
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast('메시지가 클립보드에 복사되었습니다!');
+                } catch (error) {
+                    // 클립보드 API 실패 시 fallback
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        showToast('메시지가 클립보드에 복사되었습니다!');
+                    } catch (fallbackError) {
+                        showToast('복사에 실패했습니다. 수동으로 복사해주세요.');
+                    }
+                    
+                    document.body.removeChild(textArea);
+                }
+            };
+
+            const handleClear = () => {
+                if (messageList.length === 0) return;
+                
+                showConfirmation('메시지를 모두 삭제하시겠습니까?', () => {
+                    messageList.length = 0;
+                    updateMessageArea();
+                    showToast('메시지가 초기화되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+
+
+            // 토스트 메시지 표시
+            const showToast = (message) => {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #10b981;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    animation: slideIn 0.3s ease;
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            };
+
             const init = () => {
                 Object.keys(gradeConfig).forEach(grade => {
                     const config = gradeConfig[grade];
@@ -881,6 +1251,7 @@
                     });
                 });
                 
+                
                 nextBtn.addEventListener('click', handleNextClick);
                 backBtn.addEventListener('click', handleBackClick);
                 finalSaveBtn.addEventListener('click', saveFinalData);
@@ -909,6 +1280,18 @@
                     }
                 });
                 confirmCancelBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
+
+                // 드래그 앤 드롭 이벤트 리스너
+                dropZone.addEventListener('dragover', handleDragOver);
+                dropZone.addEventListener('dragleave', handleDragLeave);
+                dropZone.addEventListener('drop', handleDrop);
+                
+                // 복사 및 초기화 버튼 이벤트 리스너
+                copyBtn.addEventListener('click', handleCopy);
+                clearBtn.addEventListener('click', handleClear);
+                
+                // 초기 메시지 영역 상태 설정
+                updateMessageArea();
 
             };
 
