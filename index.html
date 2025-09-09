@@ -297,12 +297,49 @@
             padding: 0 5px;
         }
 
-        .drop-zone-container, .message-container {
+        .drop-zone-container, .message-container, .action-container, .phase-container {
             background: white;
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
+        }
+
+        /* 페이즈 섹션 스타일 */
+        .phase-section {
+            padding: 0 5px;
+        }
+
+        /* 미니 페이즈 컨테이너 스타일 */
+        .phase-mini-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .phase-area {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px;
+            min-height: 80px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .phase-area .empty-message {
+            color: #9ca3af;
+            text-align: center;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 64px;
+        }
+
+        .phase-area .message-content {
+            white-space: pre-line;
         }
 
         .drop-zone {
@@ -540,30 +577,76 @@
         </div>
         
         <!-- 드래그 앤 드롭 기능 영역 -->
-        <div class="drag-drop-section mt-8 grid grid-cols-2 gap-6">
-            <!-- 좌측: 드롭 영역 -->
-            <div class="drop-zone-container">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">📩 담당교사 알림 대상</h3>
-                <div id="dropZone" class="drop-zone">
-                    <div class="drop-zone-content">
-                        <div class="drop-zone-icon">📥</div>
-                        <div class="drop-zone-text">여기에 학생을 드래그하세요</div>
-                        <div class="drop-zone-subtext">규칙 위반이 많은 학생을 드래그해서 놓으면<br>담당교사 전달 메시지가 자동 생성됩니다</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 우측: 메시지 창 -->
-            <div class="message-container">
+        <div class="drag-drop-section mt-8 flex gap-6">
+            <!-- 좌측: 담당교사 알림 영역 (35%) -->
+            <div class="drop-zone-container" style="flex: 0 0 35%">
                 <div class="message-header">
-                    <h3 class="text-lg font-bold text-gray-800">📝 담당교사 전달 메시지</h3>
+                    <h3 class="text-lg font-bold text-gray-800">📩 담당교사 전달 메시지</h3>
                     <div class="message-controls">
                         <button id="clearBtn" class="clear-btn">🗑️ 초기화</button>
                         <button id="copyBtn" class="copy-btn">📋 복사</button>
                     </div>
                 </div>
-                <div id="messageArea" class="message-area">
-                    <div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>
+                <div id="dropZone" class="drop-zone">
+                    <div id="dropZoneContent" class="drop-zone-content">
+                        <div class="drop-zone-icon">📥</div>
+                        <div class="drop-zone-text">여기에 학생을 드래그하세요</div>
+                        <div class="drop-zone-subtext">규칙 위반이 많은 학생을 드래그해서 놓으면<br>담당교사 전달 메시지가 자동 생성됩니다</div>
+                    </div>
+                    <div id="messageArea" class="message-area" style="display: none;">
+                        <div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 우측: 조치 관리 영역 (65%) -->
+            <div class="action-container" style="flex: 1">
+                <div class="message-header">
+                    <h3 class="text-lg font-bold text-gray-800">🧹 조치 관리</h3>
+                    <div class="message-controls">
+                        <button id="actionClearBtn" class="clear-btn">🗑️ 전체 초기화</button>
+                        <button id="actionCopyBtn" class="copy-btn">📋 전체 복사</button>
+                    </div>
+                </div>
+                <div id="actionDropZone" class="drop-zone" style="min-height: 60px; padding: 12px;">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon" style="font-size: 24px; margin-bottom: 4px;">🧽</div>
+                        <div class="drop-zone-text" style="font-size: 14px; margin-bottom: 2px;">조치 대상자를 드래그하세요</div>
+                        <div class="drop-zone-subtext" style="font-size: 11px;">7회/12회/15회 도달 시 자동 분류</div>
+                    </div>
+                </div>
+                
+                <!-- 1,2,3차 구역을 청소 조치 패널 내부에 배치 -->
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <!-- 1차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥇 1차(7회)</h4>
+                        </div>
+                        <div id="phase1Area" class="phase-area">
+                            <div class="empty-message text-xs">1차 조치 대상 없음</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 2차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥈 2차(12회)</h4>
+                        </div>
+                        <div id="phase2Area" class="phase-area">
+                            <div class="empty-message text-xs">2차 조치 대상 없음</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥉 3차(15회)</h4>
+                        </div>
+                        <div id="phase3Area" class="phase-area">
+                            <div class="empty-message text-xs">3차 조치 대상 없음</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -622,6 +705,56 @@
         </div>
     </div>
 
+    <!-- Action Record Edit Modal -->
+    <div id="actionEditModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">청소 기록 수정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">학생 정보</label>
+                    <p id="actionEditStudentInfo" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <label for="actionEditDate" class="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+                    <input type="date" id="actionEditDate" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">조치 사유</label>
+                    <p id="actionEditReason" class="text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="actionEditCancelBtn" class="btn btn-secondary">취소</button>
+                <button id="actionEditSaveBtn" class="btn btn-success">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Edit Modal -->
+    <div id="phaseEditModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">조치 날짜 수정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">학생 정보</label>
+                    <p id="phaseEditStudentInfo" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <label for="phaseEditDate" class="block text-sm font-medium text-gray-700 mb-1">조치 날짜</label>
+                    <input type="date" id="phaseEditDate" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">조치 차수</label>
+                    <p id="phaseEditLevel" class="text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="phaseEditCancelBtn" class="btn btn-secondary">취소</button>
+                <button id="phaseEditSaveBtn" class="btn btn-success">저장</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         // Firebase 설정
@@ -639,6 +772,7 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const studentDataRef = database.ref('studentData');
+        const phaseDataRef = database.ref('phaseData');
 
         document.addEventListener('DOMContentLoaded', () => {
             const gradeConfig = {
@@ -654,6 +788,12 @@
             let currentStudentInfo = { grade: null, classNum: null, studentNum: null };
             let confirmCallback = () => {};
             let messageList = [];
+            let actionRecords = {};
+            let phaseData = {
+                1: { phase1: [], phase2: [], phase3: [] },
+                2: { phase1: [], phase2: [], phase3: [] },
+                3: { phase1: [], phase2: [], phase3: [] }
+            };
 
             const studentModal = document.getElementById('studentModal');
             const modalTitle = document.getElementById('modalTitle');
@@ -678,9 +818,39 @@
             const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 
             const dropZone = document.getElementById('dropZone');
+            const dropZoneContent = document.getElementById('dropZoneContent');
             const messageArea = document.getElementById('messageArea');
             const copyBtn = document.getElementById('copyBtn');
             const clearBtn = document.getElementById('clearBtn');
+            
+            const actionDropZone = document.getElementById('actionDropZone');
+            const actionCopyBtn = document.getElementById('actionCopyBtn');
+            const actionClearBtn = document.getElementById('actionClearBtn');
+            
+            const actionEditModal = document.getElementById('actionEditModal');
+            const actionEditStudentInfo = document.getElementById('actionEditStudentInfo');
+            const actionEditDate = document.getElementById('actionEditDate');
+            const actionEditReason = document.getElementById('actionEditReason');
+            const actionEditCancelBtn = document.getElementById('actionEditCancelBtn');
+            const actionEditSaveBtn = document.getElementById('actionEditSaveBtn');
+            
+            let currentEditKey = '';
+            let currentEditIndex = -1;
+            let currentEditPhase = 0;
+            let currentEditPhaseIndex = -1;
+            
+            // Phase 관련 DOM 요소들
+            const phase1Area = document.getElementById('phase1Area');
+            const phase2Area = document.getElementById('phase2Area');
+            const phase3Area = document.getElementById('phase3Area');
+            
+            // Phase Edit Modal DOM 요소들
+            const phaseEditModal = document.getElementById('phaseEditModal');
+            const phaseEditStudentInfo = document.getElementById('phaseEditStudentInfo');
+            const phaseEditDate = document.getElementById('phaseEditDate');
+            const phaseEditLevel = document.getElementById('phaseEditLevel');
+            const phaseEditCancelBtn = document.getElementById('phaseEditCancelBtn');
+            const phaseEditSaveBtn = document.getElementById('phaseEditSaveBtn');
 
             const createChecklistItems = () => {
                 checklistItemsContainer.innerHTML = '';
@@ -727,6 +897,25 @@
             const saveData = () => {
                 studentDataRef.set(studentData).catch((error) => {
                     console.error('데이터 저장 실패:', error);
+                });
+            };
+            
+            const savePhaseData = () => {
+                phaseDataRef.set(phaseData).catch((error) => {
+                    console.error('Phase 데이터 저장 실패:', error);
+                });
+            };
+            
+            const loadPhaseData = () => {
+                phaseDataRef.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        phaseData = data;
+                        // 현재 학년의 phase 영역 업데이트
+                        updateAllPhaseAreas();
+                    }
+                }).catch((error) => {
+                    console.error('Phase 데이터 로딩 실패:', error);
                 });
             };
             
@@ -1074,6 +1263,7 @@
                 document.getElementById('grade' + grade + 'Content').classList.add('active');
                 
                 updateTableFromData(grade);
+                updateAllPhaseAreas(); // Phase 영역도 업데이트
             };
 
             // 드래그 앤 드롭 관련 함수들
@@ -1136,18 +1326,163 @@
                     console.error('드롭 데이터 처리 오류:', error);
                 }
             };
+            
+            const handleActionDragOver = (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                actionDropZone.classList.add('drag-over');
+            };
+
+            const handleActionDragLeave = (event) => {
+                if (!actionDropZone.contains(event.relatedTarget)) {
+                    actionDropZone.classList.remove('drag-over');
+                }
+            };
+
+            const handleActionDrop = (event) => {
+                event.preventDefault();
+                actionDropZone.classList.remove('drag-over');
+                actionDropZone.classList.add('drop-success');
+                
+                setTimeout(() => {
+                    actionDropZone.classList.remove('drop-success');
+                }, 600);
+
+                try {
+                    const dragData = JSON.parse(event.dataTransfer.getData('text/plain'));
+                    const { grade, classNum, studentNum, count } = dragData;
+                    
+                    let phaseNum = 0;
+                    let actionType = '';
+                    let reason = '';
+                    
+                    if (count >= 7 && count < 12) {
+                        phaseNum = 1;
+                        actionType = '1일 청소';
+                        reason = '7회 도달';
+                    } else if (count >= 12 && count < 15) {
+                        phaseNum = 2;
+                        actionType = '3일 청소';
+                        reason = '12회 도달';
+                    } else if (count >= 15) {
+                        phaseNum = 3;
+                        actionType = '7일 청소';
+                        reason = '15회 도달';
+                    } else {
+                        showToast('아직 청소 조치 대상이 아닙니다. (7회 이상 필요)');
+                        return;
+                    }
+                    
+                    // 기존 청소 조치 기록에 추가
+                    const today = getTodayDateString();
+                    const key = grade + '-' + classNum + '-' + studentNum;
+                    
+                    if (!actionRecords[key]) {
+                        actionRecords[key] = [];
+                    }
+                    
+                    const newRecord = {
+                        date: today,
+                        type: actionType,
+                        reason: reason,
+                        count: count
+                    };
+                    
+                    actionRecords[key].push(newRecord);
+                    
+                    // 해당 phase 목록에도 추가 (날짜 포함, 학년별로 저장)
+                    const message = grade + '학년 ' + classNum + '반 ' + studentNum + '번 (' + count + '회) - ' + today;
+                    const gradeNum = parseInt(grade);
+                    const phaseKey = 'phase' + phaseNum;
+                    
+                    // phaseData 구조 확인 및 초기화
+                    if (!phaseData[gradeNum]) {
+                        phaseData[gradeNum] = { phase1: [], phase2: [], phase3: [] };
+                    }
+                    if (!phaseData[gradeNum][phaseKey]) {
+                        phaseData[gradeNum][phaseKey] = [];
+                    }
+                    
+                    if (!phaseData[gradeNum][phaseKey].includes(message)) {
+                        phaseData[gradeNum][phaseKey].push(message);
+                        savePhaseData(); // Firebase에 저장
+                        
+                        // 현재 보고 있는 학년이면 UI 업데이트
+                        if (gradeNum === currentGrade) {
+                            updatePhaseArea(phaseNum, phaseData[gradeNum][phaseKey], 
+                                phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
+                            );
+                        }
+                    }
+                    
+                    showToast(grade + '학년 ' + classNum + '반 ' + studentNum + '번이 ' + phaseNum + '차 조치로 분류되었습니다.');
+                    
+                } catch (error) {
+                    console.error('조치 드롭 데이터 처리 오류:', error);
+                }
+            };
 
             const updateMessageArea = () => {
                 if (messageList.length === 0) {
-                    messageArea.innerHTML = '<div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>';
+                    dropZoneContent.style.display = 'block';
+                    messageArea.style.display = 'none';
                     copyBtn.disabled = true;
                     clearBtn.disabled = true;
                 } else {
+                    dropZoneContent.style.display = 'none';
+                    messageArea.style.display = 'block';
                     const messageContent = messageList.join('\n');
                     messageArea.innerHTML = '<div class="message-content">' + messageContent + '</div>';
                     copyBtn.disabled = false;
                     clearBtn.disabled = false;
                 }
+            };
+            
+            
+            const updatePhaseArea = (phaseNum, phaseList, phaseArea) => {
+                // phaseList가 undefined이거나 null인 경우 빈 배열로 처리
+                const safePhaseList = phaseList || [];
+                
+                if (safePhaseList.length === 0) {
+                    phaseArea.innerHTML = '<div class="empty-message text-xs">' + phaseNum + '차 조치 대상 없음</div>';
+                } else {
+                    let content = '<div class="space-y-1">';
+                    safePhaseList.forEach((item, index) => {
+                        content += '<div class="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">';
+                        content += '<span class="text-xs flex-1 mr-2">' + item + '</span>';
+                        content += '<div class="flex space-x-1">';
+                        content += '<button class="edit-phase-btn text-blue-500 hover:text-blue-700 text-xs" data-phase="' + phaseNum + '" data-index="' + index + '">✏️</button>';
+                        content += '<button class="delete-phase-btn text-red-500 hover:text-red-700 text-xs" data-phase="' + phaseNum + '" data-index="' + index + '">🗑️</button>';
+                        content += '</div>';
+                        content += '</div>';
+                    });
+                    content += '</div>';
+                    
+                    phaseArea.innerHTML = content;
+                    
+                    // 이벤트 리스너 추가
+                    phaseArea.querySelectorAll('.edit-phase-btn').forEach(btn => {
+                        btn.addEventListener('click', handleEditPhase);
+                    });
+                    phaseArea.querySelectorAll('.delete-phase-btn').forEach(btn => {
+                        btn.addEventListener('click', handleDeletePhase);
+                    });
+                }
+            };
+            
+            const updateAllPhaseAreas = () => {
+                if (!phaseData || !phaseData[currentGrade]) {
+                    // 데이터가 아직 로드되지 않은 경우 기본값으로 초기화
+                    if (!phaseData) phaseData = {};
+                    if (!phaseData[currentGrade]) {
+                        phaseData[currentGrade] = { phase1: [], phase2: [], phase3: [] };
+                    }
+                }
+                
+                const currentPhaseData = phaseData[currentGrade];
+                updatePhaseArea(1, currentPhaseData.phase1, phase1Area);
+                updatePhaseArea(2, currentPhaseData.phase2, phase2Area);
+                updatePhaseArea(3, currentPhaseData.phase3, phase3Area);
             };
 
             const handleCopy = async () => {
@@ -1190,6 +1525,186 @@
                     confirmModal.classList.add('hidden');
                 });
             };
+            
+            const handleActionCopy = async () => {
+                // 현재 학년의 모든 phase 목록을 합쳐서 복사
+                const currentPhaseData = phaseData[currentGrade];
+                let allPhases = [];
+                
+                if (currentPhaseData.phase1.length > 0) {
+                    allPhases.push('1차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase1);
+                    allPhases.push('');
+                }
+                if (currentPhaseData.phase2.length > 0) {
+                    allPhases.push('2차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase2);
+                    allPhases.push('');
+                }
+                if (currentPhaseData.phase3.length > 0) {
+                    allPhases.push('3차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase3);
+                    allPhases.push('');
+                }
+                
+                if (allPhases.length === 0) {
+                    showToast('복사할 조치 목록이 없습니다.');
+                    return;
+                }
+                
+                const textToCopy = currentGrade + '학년 조치 목록:\n\n' + allPhases.join('\n').trim();
+                
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast(currentGrade + '학년 조치 목록이 클립보드에 복사되었습니다!');
+                } catch (error) {
+                    console.error('복사 오류:', error);
+                    showToast('복사에 실패했습니다.');
+                }
+            };
+
+            const handleActionClear = () => {
+                const currentPhaseData = phaseData[currentGrade];
+                const hasData = currentPhaseData.phase1.length > 0 || currentPhaseData.phase2.length > 0 || currentPhaseData.phase3.length > 0;
+                if (!hasData) return;
+                
+                showConfirmation(currentGrade + '학년 모든 조치 목록을 삭제하시겠습니까?', () => {
+                    currentPhaseData.phase1.length = 0;
+                    currentPhaseData.phase2.length = 0;
+                    currentPhaseData.phase3.length = 0;
+                    savePhaseData(); // Firebase에 저장
+                    
+                    updateAllPhaseAreas();
+                    
+                    showToast(currentGrade + '학년 모든 조치 목록이 초기화되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            
+            const handleEditPhase = (event) => {
+                const phaseNum = parseInt(event.target.dataset.phase);
+                const index = parseInt(event.target.dataset.index);
+                
+                const currentPhaseData = phaseData[currentGrade];
+                const phaseKey = 'phase' + phaseNum;
+                const item = currentPhaseData[phaseKey][index];
+                
+                // "1학년 3반 5번 (8회) - 2025-09-09" 형식에서 정보 추출
+                const parts = item.split(' - ');
+                const studentInfo = parts[0];
+                const currentDate = parts[1];
+                
+                currentEditPhase = phaseNum;
+                currentEditPhaseIndex = index;
+                
+                phaseEditStudentInfo.textContent = studentInfo;
+                phaseEditDate.value = currentDate;
+                phaseEditLevel.textContent = phaseNum + '차 조치';
+                
+                phaseEditModal.classList.remove('hidden');
+            };
+            
+            const handleDeletePhase = (event) => {
+                const phaseNum = parseInt(event.target.dataset.phase);
+                const index = parseInt(event.target.dataset.index);
+                
+                const currentPhaseData = phaseData[currentGrade];
+                const phaseKey = 'phase' + phaseNum;
+                const item = currentPhaseData[phaseKey][index];
+                const studentInfo = item.split(' - ')[0];
+                
+                showConfirmation(studentInfo + '의 ' + phaseNum + '차 조치를 삭제하시겠습니까?', () => {
+                    currentPhaseData[phaseKey].splice(index, 1);
+                    savePhaseData(); // Firebase에 저장
+                    updatePhaseArea(phaseNum, currentPhaseData[phaseKey],
+                        phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
+                    );
+                    showToast(phaseNum + '차 조치가 삭제되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            const closePhaseEditModal = () => {
+                phaseEditModal.classList.add('hidden');
+                currentEditPhase = 0;
+                currentEditPhaseIndex = -1;
+            };
+            
+            const savePhaseEdit = () => {
+                if (currentEditPhase > 0 && currentEditPhaseIndex >= 0) {
+                    const currentPhaseData = phaseData[currentGrade];
+                    const phaseKey = 'phase' + currentEditPhase;
+                    const item = currentPhaseData[phaseKey][currentEditPhaseIndex];
+                    const studentInfo = item.split(' - ')[0];
+                    const newDate = phaseEditDate.value;
+                    
+                    currentPhaseData[phaseKey][currentEditPhaseIndex] = studentInfo + ' - ' + newDate;
+                    savePhaseData(); // Firebase에 저장
+                    
+                    updatePhaseArea(currentEditPhase, currentPhaseData[phaseKey],
+                        currentEditPhase === 1 ? phase1Area : (currentEditPhase === 2 ? phase2Area : phase3Area)
+                    );
+                    
+                    showToast('조치 날짜가 수정되었습니다.');
+                    closePhaseEditModal();
+                }
+            };
+            
+            const handleEditAction = (event) => {
+                const key = event.target.dataset.key;
+                const index = parseInt(event.target.dataset.index);
+                const record = actionRecords[key][index];
+                
+                const keyParts = key.split('-');
+                const grade = keyParts[0];
+                const classNum = keyParts[1];
+                const studentNum = keyParts[2];
+                
+                currentEditKey = key;
+                currentEditIndex = index;
+                
+                actionEditStudentInfo.textContent = grade + '학년 ' + classNum + '반 ' + studentNum + '번';
+                actionEditDate.value = record.date;
+                actionEditReason.textContent = record.reason;
+                
+                actionEditModal.classList.remove('hidden');
+            };
+            
+            const handleDeleteAction = (event) => {
+                const key = event.target.dataset.key;
+                const index = parseInt(event.target.dataset.index);
+                
+                const keyParts = key.split('-');
+                const grade = keyParts[0];
+                const classNum = keyParts[1];
+                const studentNum = keyParts[2];
+                
+                showConfirmation(grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생의 이 청소 기록을 삭제하시겠습니까?', () => {
+                    actionRecords[key].splice(index, 1);
+                    if (actionRecords[key].length === 0) {
+                        delete actionRecords[key];
+                    }
+                    updateActionArea();
+                    showToast('청소 기록이 삭제되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            const closeActionEditModal = () => {
+                actionEditModal.classList.add('hidden');
+                currentEditKey = '';
+                currentEditIndex = -1;
+            };
+            
+            const saveActionEdit = () => {
+                if (currentEditKey && currentEditIndex >= 0) {
+                    actionRecords[currentEditKey][currentEditIndex].date = actionEditDate.value;
+                    updateActionArea();
+                    showToast('청소 기록이 수정되었습니다.');
+                    closeActionEditModal();
+                }
+            };
 
 
             // 토스트 메시지 표시
@@ -1228,6 +1743,7 @@
 
                 createChecklistItems();
                 loadData();
+                loadPhaseData();
                 
                 // 실시간 데이터 동기화 설정
                 studentDataRef.on('value', (snapshot) => {
@@ -1239,6 +1755,15 @@
                         Object.keys(gradeConfig).forEach(grade => {
                             updateTableFromData(parseInt(grade));
                         });
+                    }
+                });
+                
+                // Phase 데이터 실시간 동기화 설정
+                phaseDataRef.on('value', (snapshot) => {
+                    const newPhaseData = snapshot.val();
+                    if (newPhaseData && JSON.stringify(phaseData) !== JSON.stringify(newPhaseData)) {
+                        phaseData = newPhaseData;
+                        updateAllPhaseAreas();
                     }
                 });
                 
@@ -1280,18 +1805,36 @@
                     }
                 });
                 confirmCancelBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
+                
+                // 청소 기록 수정 모달 이벤트 리스너
+                actionEditCancelBtn.addEventListener('click', closeActionEditModal);
+                actionEditSaveBtn.addEventListener('click', saveActionEdit);
+                
+                // Phase 수정 모달 이벤트 리스너
+                phaseEditCancelBtn.addEventListener('click', closePhaseEditModal);
+                phaseEditSaveBtn.addEventListener('click', savePhaseEdit);
 
                 // 드래그 앤 드롭 이벤트 리스너
                 dropZone.addEventListener('dragover', handleDragOver);
                 dropZone.addEventListener('dragleave', handleDragLeave);
                 dropZone.addEventListener('drop', handleDrop);
                 
+                // 청소 조치 드래그 앤 드롭 이벤트 리스너
+                actionDropZone.addEventListener('dragover', handleActionDragOver);
+                actionDropZone.addEventListener('dragleave', handleActionDragLeave);
+                actionDropZone.addEventListener('drop', handleActionDrop);
+                
                 // 복사 및 초기화 버튼 이벤트 리스너
                 copyBtn.addEventListener('click', handleCopy);
                 clearBtn.addEventListener('click', handleClear);
+                actionCopyBtn.addEventListener('click', handleActionCopy);
+                actionClearBtn.addEventListener('click', handleActionClear);
                 
                 // 초기 메시지 영역 상태 설정
                 updateMessageArea();
+                
+                // 초기 Phase 영역 상태 설정
+                updateAllPhaseAreas();
 
             };
 
