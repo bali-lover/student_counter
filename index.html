@@ -927,10 +927,52 @@
                 return year + '-' + month + '-' + day;
             };
 
+            // 해당 학생이 현재 단계에서 조치가 필요한지 확인하는 함수
+            const checkStudentNeedsAction = (grade, classNum, studentNum, count) => {
+                // 7회 미만이면 조치 불필요
+                if (count < 7) {
+                    return false;
+                }
+                
+                if (!phaseData || !phaseData[grade]) {
+                    // phaseData가 없으면 조치되지 않은 것으로 간주
+                    return count >= 7;
+                }
+                
+                const gradePhaseData = phaseData[grade];
+                const studentInfo = grade + '학년 ' + classNum + '반 ' + studentNum + '번';
+                
+                // 각 단계별 조치 여부 확인
+                const isInPhase1 = (gradePhaseData.phase1 || []).some(item => item.includes(studentInfo));
+                const isInPhase2 = (gradePhaseData.phase2 || []).some(item => item.includes(studentInfo));
+                const isInPhase3 = (gradePhaseData.phase3 || []).some(item => item.includes(studentInfo));
+                
+                // 단계별 조치 필요성 판단
+                if (count >= 15) {
+                    // 15회 이상: 3차 조치가 필요하지만 아직 3차에 없는 경우
+                    return !isInPhase3;
+                } else if (count >= 12) {
+                    // 12회 이상: 2차 조치가 필요하지만 아직 2차에 없는 경우 (3차는 이미 처리됨을 의미)
+                    return !isInPhase2 && !isInPhase3;
+                } else if (count >= 7) {
+                    // 7회 이상: 1차 조치가 필요하지만 아직 1차에 없는 경우 (2차, 3차는 이미 처리됨을 의미)
+                    return !isInPhase1 && !isInPhase2 && !isInPhase3;
+                }
+                
+                return false;
+            };
+
             const updateCellAppearance = (cell, count) => {
                 // 기본 클래스 및 스타일 제거
                 cell.className = 'data-cell';
                 cell.style.cssText = '';
+                
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                
+                // 해당 학생이 조치가 필요한지 확인 (7회 이상이면서 아직 조치되지 않은 경우)
+                const needsAction = checkStudentNeedsAction(grade, classNum, studentNum, count);
                 
                 if (count === 0) {
                     cell.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
@@ -952,6 +994,12 @@
                     cell.style.color = '#ffffff';
                     cell.style.boxShadow = '0 6px 16px rgba(185, 28, 28, 0.5)';
                     cell.style.transform = 'scale(1.02)';
+                }
+                
+                // 조치가 필요한 학생인 경우 초록 테두리 표시 (체크마크 없이)
+                if (needsAction) {
+                    cell.style.border = '3px solid #10b981';
+                    cell.style.position = 'relative';
                 }
             };
             
@@ -1413,6 +1461,9 @@
                                 phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
                             );
                         }
+                        
+                        // 테이블 업데이트 (조치 표시 갱신)
+                        updateTableFromData(gradeNum);
                     }
                     
                     showToast(grade + '학년 ' + classNum + '반 ' + studentNum + '번이 ' + phaseNum + '차 조치로 분류되었습니다.');
@@ -1576,6 +1627,9 @@
                     
                     updateAllPhaseAreas();
                     
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
+                    
                     showToast(currentGrade + '학년 모든 조치 목록이 초기화되었습니다.');
                     confirmModal.classList.add('hidden');
                 });
@@ -1620,6 +1674,8 @@
                     updatePhaseArea(phaseNum, currentPhaseData[phaseKey],
                         phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
                     );
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
                     showToast(phaseNum + '차 조치가 삭제되었습니다.');
                     confirmModal.classList.add('hidden');
                 });
@@ -1645,6 +1701,9 @@
                     updatePhaseArea(currentEditPhase, currentPhaseData[phaseKey],
                         currentEditPhase === 1 ? phase1Area : (currentEditPhase === 2 ? phase2Area : phase3Area)
                     );
+                    
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
                     
                     showToast('조치 날짜가 수정되었습니다.');
                     closePhaseEditModal();
@@ -1764,6 +1823,8 @@
                     if (newPhaseData && JSON.stringify(phaseData) !== JSON.stringify(newPhaseData)) {
                         phaseData = newPhaseData;
                         updateAllPhaseAreas();
+                        // 테이블 업데이트 (조치 표시 갱신)
+                        updateTableFromData(currentGrade);
                     }
                 });
                 
