@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 약속 이행서 카운터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            overflow-x: hidden;
+            zoom: 0.75;
+        }
+
+        /* 헤더 스타일 */
+        .header {
+            background-color: white;
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            margin: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+        }
+
+        .header h1::before {
+            content: "📊";
+            margin-right: 12px;
+            font-size: 28px;
+        }
+
+        /* 엑셀 스타일 탭 영역 */
+        .tab-container {
+            margin: 10px 10px 0 10px;
+            display: flex;
+            justify-content: flex-start;
+            background-color: #f5f7fa;
+            padding-left: 15px;
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 0;
+            margin-bottom: -1px;
+        }
+
+        .grade-tab {
+            padding: 8px 20px;
+            border: 1px solid #d1d5db;
+            border-bottom: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            color: #374151;
+            background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+            position: relative;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            margin-right: -1px;
+        }
+
+        .grade-tab:hover:not(.active) {
+            background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+            color: #111827;
+        }
+
+        .grade-tab.active {
+            background: linear-gradient(to bottom, #fef2f2 0%, #fecaca 100%);
+            color: #dc2626;
+            border-bottom: 1px solid #fef2f2;
+            z-index: 10;
+            position: relative;
+        }
+
+        .grade-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #fef2f2;
+        }
+
+        /* 메인 컨테이너 */
+        .main-container {
+            margin: 0 10px 10px 10px;
+            background-color: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        .grade-content {
+            display: none;
+        }
+
+        .grade-content.active {
+            display: block;
+        }
+
+        .scroll-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+        }
+
+        /* 테이블 스타일 */
+        .table-container {
+            border-collapse: separate;
+            border-spacing: 1px 18px;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .table-container th, .table-container td {
+            text-align: center;
+            padding: 0;
+            white-space: nowrap;
+        }
+
+        .class-header-cell, .student-header-cell, .data-cell {
+            padding: 6px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .class-header-cell {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1e293b;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            width: 45px;
+            min-width: 45px;
+        }
+
+        .student-header-cell {
+            width: 38px;
+            min-width: 38px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #475569;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .data-cell {
+            width: 38px;
+            min-width: 38px;
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .data-cell:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            background: white;
+            font-size: 18px !important;
+        }
+
+        .modal-content h3 {
+            font-size: 24px !important;
+        }
+
+        .modal-content label {
+            font-size: 20px !important;
+        }
+
+        .modal-content input[type="text"] {
+            font-size: 18px !important;
+        }
+
+        .modal-content p {
+            font-size: 18px !important;
+        }
+
+        /* 버튼 스타일 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+        }
+
+        /* 입력 필드 스타일 */
+        input[type="date"] {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* 행열 하이라이트 효과 */
+        .highlight-row {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%) !important;
+        }
+
+        .highlight-col {
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.15) 100%) !important;
+        }
+
+
+        /* 드래그 앤 드롭 영역 스타일 */
+        .drag-drop-section {
+            padding: 0 5px;
+        }
+
+        .drop-zone-container, .message-container, .action-container, .phase-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* 페이즈 섹션 스타일 */
+        .phase-section {
+            padding: 0 5px;
+        }
+
+        /* 미니 페이즈 컨테이너 스타일 */
+        .phase-mini-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .phase-area {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px;
+            min-height: 80px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .phase-area .empty-message {
+            color: #9ca3af;
+            text-align: center;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 64px;
+        }
+
+        .phase-area .message-content {
+            white-space: pre-line;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            transition: all 0.3s ease;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .drop-zone-content {
+            pointer-events: none;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+
+        .drop-zone-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-subtext {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .message-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .copy-btn, .clear-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .copy-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .clear-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .message-area {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            background: #f8fafc;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .empty-message {
+            color: #9ca3af;
+            text-align: center;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 160px;
+        }
+
+        .message-content {
+            white-space: pre-line;
+        }
+
+        /* 드래그 가능한 셀 스타일 */
+        .data-cell.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg) scale(0.9);
+            z-index: 1000;
+        }
+
+        .data-cell[draggable="true"] {
+            cursor: grab;
+        }
+
+        .data-cell[draggable="true"]:active {
+            cursor: grabbing;
+        }
+
+        /* 애니메이션 */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes dropSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .drop-zone.drop-success {
+            animation: dropSuccess 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Firebase 설정 모달 -->
+    <div id="firebaseModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h2 class="text-xl font-bold mb-4 text-center">Firebase 설정</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="firebaseApiKey" class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                    <input type="password" id="firebaseApiKey" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Firebase API Key를 입력하세요">
+                </div>
+                <div>
+                    <label for="firebaseProjectId" class="block text-sm font-medium text-gray-700 mb-1">Project ID</label>
+                    <input type="text" id="firebaseProjectId" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Firebase Project ID를 입력하세요">
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="saveFirebaseSettings()" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+                        연결하기
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 text-center">
+                    Firebase Console에서 API Key와 Project ID를 확인할 수 있습니다.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 헤더 -->
+    <div class="header">
+        <h1>학생 약속 이행서 카운터</h1>
+        <button onclick="showFirebaseSettings()" class="text-sm bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600">
+            Firebase 설정
+        </button>
+    </div>
+
+    <!-- 학년별 탭 -->
+    <div class="tab-container">
+        <nav class="tab-nav">
+            <button id="grade1Tab" class="grade-tab active" data-grade="1">1학년</button>
+            <button id="grade2Tab" class="grade-tab" data-grade="2">2학년</button>
+            <button id="grade3Tab" class="grade-tab" data-grade="3">3학년</button>
+        </nav>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+        <!-- 1학년 내용 -->
+        <div id="grade1Content" class="grade-content active">
+            <div class="scroll-container">
+                <table id="counter-table-grade1" class="table-container">
+                    <thead>
+                        <tr>
+                            <th class="class-header-cell">반</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2학년 내용 -->
+        <div id="grade2Content" class="grade-content">
+            <div class="scroll-container">
+                <table id="counter-table-grade2" class="table-container">
+                    <thead>
+                        <tr>
+                            <th class="class-header-cell">반</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3학년 내용 -->
+        <div id="grade3Content" class="grade-content">
+            <div class="scroll-container">
+                <table id="counter-table-grade3" class="table-container">
+                    <thead>
+                        <tr>
+                            <th class="class-header-cell">반</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 드래그 앤 드롭 기능 영역 -->
+        <div class="drag-drop-section mt-8 flex gap-6">
+            <!-- 좌측: 담당교사 알림 영역 (35%) -->
+            <div class="drop-zone-container" style="flex: 0 0 35%">
+                <div class="message-header">
+                    <h3 class="text-lg font-bold text-gray-800">📩 담당교사 전달 메시지</h3>
+                    <div class="message-controls">
+                        <button id="clearBtn" class="clear-btn">🗑️ 초기화</button>
+                        <button id="copyBtn" class="copy-btn">📋 복사</button>
+                    </div>
+                </div>
+                <div id="dropZone" class="drop-zone">
+                    <div id="dropZoneContent" class="drop-zone-content">
+                        <div class="drop-zone-icon">📥</div>
+                        <div class="drop-zone-text">여기에 학생을 드래그하세요</div>
+                        <div class="drop-zone-subtext">규칙 위반이 많은 학생을 드래그해서 놓으면<br>담당교사 전달 메시지가 자동 생성됩니다</div>
+                    </div>
+                    <div id="messageArea" class="message-area" style="display: none;">
+                        <div class="empty-message">드래그 앤 드롭으로 학생을 추가하면<br>메시지가 자동으로 생성됩니다</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 우측: 조치 관리 영역 (65%) -->
+            <div class="action-container" style="flex: 1">
+                <div class="message-header">
+                    <h3 class="text-lg font-bold text-gray-800">🧹 조치 관리</h3>
+                    <div class="message-controls">
+                        <button id="actionClearBtn" class="clear-btn">🗑️ 전체 초기화</button>
+                        <button id="actionCopyBtn" class="copy-btn">📋 전체 복사</button>
+                    </div>
+                </div>
+                <div id="actionDropZone" class="drop-zone" style="min-height: 60px; padding: 12px;">
+                    <div class="drop-zone-content">
+                        <div class="drop-zone-icon" style="font-size: 24px; margin-bottom: 4px;">🧽</div>
+                        <div class="drop-zone-text" style="font-size: 14px; margin-bottom: 2px;">조치 대상자를 드래그하세요</div>
+                        <div class="drop-zone-subtext" style="font-size: 11px;">7회/12회/15회 도달 시 자동 분류</div>
+                    </div>
+                </div>
+                
+                <!-- 1,2,3차 구역을 청소 조치 패널 내부에 배치 -->
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <!-- 1차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥇 1차(7회)</h4>
+                        </div>
+                        <div id="phase1Area" class="phase-area">
+                            <div class="empty-message text-xs">1차 조치 대상 없음</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 2차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥈 2차(12회)</h4>
+                        </div>
+                        <div id="phase2Area" class="phase-area">
+                            <div class="empty-message text-xs">2차 조치 대상 없음</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3차 구역 -->
+                    <div class="phase-mini-container">
+                        <div class="mb-2">
+                            <h4 class="text-sm font-bold text-gray-800">🥉 3차(15회)</h4>
+                        </div>
+                        <div id="phase3Area" class="phase-area">
+                            <div class="empty-message text-xs">3차 조치 대상 없음</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for adding/editing student data -->
+    <div id="studentModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-4 text-center"></h3>
+            
+            <!-- Step 1: Checklist -->
+            <div id="checklistStep">
+                <p class="text-center text-gray-600 mb-4">위반 항목을 선택하세요.</p>
+                <div id="checklist-items" class="space-y-4">
+                </div>
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button id="cancelBtn" class="btn btn-secondary">취소</button>
+                    <button id="nextBtn" class="btn btn-primary">다음</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Date Picker -->
+            <div id="dateStep" class="hidden">
+                <p class="text-center text-gray-600 mb-4">날짜를 지정하세요.</p>
+                <input type="date" id="dateInput" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                <div class="mt-6 flex justify-between">
+                    <button id="backBtn" class="btn btn-secondary">뒤로</button>
+                    <button id="finalSaveBtn" class="btn btn-success">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-md mx-auto shadow-lg">
+            <h3 id="historyModalTitle" class="text-xl font-bold text-gray-800 mb-4 text-center"></h3>
+            <div id="historyList" class="max-h-80 overflow-y-auto space-y-4 pr-2">
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                 <button id="historyResetBtn" class="btn btn-warning">기록 초기화</button>
+                <button id="historyCloseBtn" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal for Reset -->
+    <div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">확인</h3>
+            <p id="confirmMessage" class="text-gray-600 text-center mb-6">이 작업은 되돌릴 수 없습니다.</p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirmCancelBtn" class="btn btn-secondary">취소</button>
+                <button id="confirmResetBtn" class="btn btn-danger">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Record Edit Modal -->
+    <div id="actionEditModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">청소 기록 수정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">학생 정보</label>
+                    <p id="actionEditStudentInfo" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <label for="actionEditDate" class="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+                    <input type="date" id="actionEditDate" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">조치 사유</label>
+                    <p id="actionEditReason" class="text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="actionEditCancelBtn" class="btn btn-secondary">취소</button>
+                <button id="actionEditSaveBtn" class="btn btn-success">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Edit Modal -->
+    <div id="phaseEditModal" class="fixed inset-0 z-50 flex items-center justify-center hidden modal-overlay p-4">
+        <div class="modal-content bg-white p-6 w-full max-w-sm mx-auto shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">조치 날짜 수정</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">학생 정보</label>
+                    <p id="phaseEditStudentInfo" class="text-gray-600"></p>
+                </div>
+                <div>
+                    <label for="phaseEditDate" class="block text-sm font-medium text-gray-700 mb-1">조치 날짜</label>
+                    <input type="date" id="phaseEditDate" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">조치 차수</label>
+                    <p id="phaseEditLevel" class="text-gray-600"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-4">
+                <button id="phaseEditCancelBtn" class="btn btn-secondary">취소</button>
+                <button id="phaseEditSaveBtn" class="btn btn-success">저장</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Firebase 설정 (localStorage에서 읽어오기)
+        function initializeFirebase() {
+            const apiKey = localStorage.getItem('firebaseApiKey');
+            const projectId = localStorage.getItem('firebaseProjectId');
+
+            if (!apiKey || !projectId) {
+                showFirebaseSettings();
+                return false;
+            }
+
+            const firebaseConfig = {
+                apiKey: apiKey,
+                authDomain: `${projectId}.firebaseapp.com`,
+                databaseURL: `https://${projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`,
+                projectId: projectId,
+                storageBucket: `${projectId}.firebasestorage.app`,
+                messagingSenderId: "383693605457",
+                appId: "1:383693605457:web:b5c75a08b0fcef08188670"
+            };
+
+            try {
+                firebase.initializeApp(firebaseConfig);
+                window.database = firebase.database();
+                window.studentDataRef = database.ref('studentData');
+                window.phaseDataRef = database.ref('phaseData');
+                return true;
+            } catch (error) {
+                console.error('Firebase 초기화 오류:', error);
+                showFirebaseSettings();
+                return false;
+            }
+        }
+
+        // Firebase 설정 관련 함수들
+        function showFirebaseSettings() {
+            const modal = document.getElementById('firebaseModal');
+            modal.style.display = 'flex';
+
+            // 기존 설정 불러오기
+            const apiKey = localStorage.getItem('firebaseApiKey');
+            const projectId = localStorage.getItem('firebaseProjectId');
+
+            if (apiKey) document.getElementById('firebaseApiKey').value = apiKey;
+            if (projectId) document.getElementById('firebaseProjectId').value = projectId;
+        }
+
+        function saveFirebaseSettings() {
+            const apiKey = document.getElementById('firebaseApiKey').value.trim();
+            const projectId = document.getElementById('firebaseProjectId').value.trim();
+
+            if (!apiKey || !projectId) {
+                alert('API Key와 Project ID를 모두 입력해주세요.');
+                return;
+            }
+
+            // localStorage에 저장
+            localStorage.setItem('firebaseApiKey', apiKey);
+            localStorage.setItem('firebaseProjectId', projectId);
+
+            // Firebase 재초기화
+            try {
+                // 기존 앱이 있다면 삭제
+                if (firebase.apps.length > 0) {
+                    firebase.apps.forEach(app => app.delete());
+                }
+
+                const success = initializeFirebase();
+                if (success) {
+                    document.getElementById('firebaseModal').style.display = 'none';
+                    alert('Firebase 설정이 완료되었습니다!');
+                    location.reload(); // 페이지 새로고침
+                }
+            } catch (error) {
+                console.error('Firebase 설정 오류:', error);
+                alert('Firebase 설정에 오류가 발생했습니다. API Key와 Project ID를 확인해주세요.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Firebase 초기화 먼저 시도
+            if (!initializeFirebase()) {
+                return; // Firebase 설정이 없으면 설정 모달이 표시됨
+            }
+            const gradeConfig = {
+                1: { classes: 7, students: 35 },
+                2: { classes: 6, students: 35 },
+                3: { classes: 5, students: 35 }
+            };
+            const violationItems = ['교우관계', '용모복장', '수업', '기본생활습관', '학생안전'];
+
+            let currentGrade = 1;
+            let studentData = {};
+            let tempCheckedItems = [];
+            let currentStudentInfo = { grade: null, classNum: null, studentNum: null };
+            let confirmCallback = () => {};
+            let messageList = [];
+            let actionRecords = {};
+            let phaseData = {
+                1: { phase1: [], phase2: [], phase3: [] },
+                2: { phase1: [], phase2: [], phase3: [] },
+                3: { phase1: [], phase2: [], phase3: [] }
+            };
+
+            const studentModal = document.getElementById('studentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const checklistItemsContainer = document.getElementById('checklist-items');
+            const checklistStep = document.getElementById('checklistStep');
+            const dateStep = document.getElementById('dateStep');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const backBtn = document.getElementById('backBtn');
+            const finalSaveBtn = document.getElementById('finalSaveBtn');
+            const dateInput = document.getElementById('dateInput');
+
+            const historyModal = document.getElementById('historyModal');
+            const historyModalTitle = document.getElementById('historyModalTitle');
+            const historyList = document.getElementById('historyList');
+            const historyCloseBtn = document.getElementById('historyCloseBtn');
+            const historyResetBtn = document.getElementById('historyResetBtn');
+
+            const confirmModal = document.getElementById('confirmModal');
+            const confirmMessage = document.getElementById('confirmMessage');
+            const confirmResetBtn = document.getElementById('confirmResetBtn');
+            const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+            const dropZone = document.getElementById('dropZone');
+            const dropZoneContent = document.getElementById('dropZoneContent');
+            const messageArea = document.getElementById('messageArea');
+            const copyBtn = document.getElementById('copyBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            const actionDropZone = document.getElementById('actionDropZone');
+            const actionCopyBtn = document.getElementById('actionCopyBtn');
+            const actionClearBtn = document.getElementById('actionClearBtn');
+            
+            const actionEditModal = document.getElementById('actionEditModal');
+            const actionEditStudentInfo = document.getElementById('actionEditStudentInfo');
+            const actionEditDate = document.getElementById('actionEditDate');
+            const actionEditReason = document.getElementById('actionEditReason');
+            const actionEditCancelBtn = document.getElementById('actionEditCancelBtn');
+            const actionEditSaveBtn = document.getElementById('actionEditSaveBtn');
+            
+            let currentEditKey = '';
+            let currentEditIndex = -1;
+            let currentEditPhase = 0;
+            let currentEditPhaseIndex = -1;
+            
+            // Phase 관련 DOM 요소들
+            const phase1Area = document.getElementById('phase1Area');
+            const phase2Area = document.getElementById('phase2Area');
+            const phase3Area = document.getElementById('phase3Area');
+            
+            // Phase Edit Modal DOM 요소들
+            const phaseEditModal = document.getElementById('phaseEditModal');
+            const phaseEditStudentInfo = document.getElementById('phaseEditStudentInfo');
+            const phaseEditDate = document.getElementById('phaseEditDate');
+            const phaseEditLevel = document.getElementById('phaseEditLevel');
+            const phaseEditCancelBtn = document.getElementById('phaseEditCancelBtn');
+            const phaseEditSaveBtn = document.getElementById('phaseEditSaveBtn');
+
+            const createChecklistItems = () => {
+                checklistItemsContainer.innerHTML = '';
+                violationItems.forEach((item, index) => {
+                    const id = index + 1;
+                    const container = document.createElement('div');
+                    container.className = 'space-y-2';
+                    
+                    container.innerHTML = 
+                        '<div class="flex items-center">' +
+                            '<input id="checkbox-' + id + '" type="checkbox" data-note-target="note-' + id + '" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 violation-checkbox">' +
+                            '<label for="checkbox-' + id + '" class="ml-3 text-gray-700">' + item + '</label>' +
+                        '</div>' +
+                        '<input type="text" id="note-' + id + '" class="w-full p-1 border border-gray-200 rounded-md text-sm hidden transition-all" placeholder="구체적인 내용을 입력하세요...">';
+                    checklistItemsContainer.appendChild(container);
+                });
+
+                document.querySelectorAll('.violation-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', event => {
+                        const noteInput = document.getElementById(event.target.dataset.noteTarget);
+                        if (event.target.checked) {
+                            noteInput.classList.remove('hidden');
+                        } else {
+                            noteInput.classList.add('hidden');
+                            noteInput.value = '';
+                        }
+                    });
+                });
+            };
+
+            const loadData = () => {
+                studentDataRef.once('value', (snapshot) => {
+                    studentData = snapshot.val() || {};
+                    // 모든 학년의 테이블 업데이트
+                    Object.keys(gradeConfig).forEach(grade => {
+                        updateTableFromData(parseInt(grade));
+                    });
+                }).catch((error) => {
+                    console.error('데이터 로딩 실패:', error);
+                    studentData = {};
+                });
+            };
+
+            const saveData = () => {
+                studentDataRef.set(studentData).catch((error) => {
+                    console.error('데이터 저장 실패:', error);
+                });
+            };
+            
+            const savePhaseData = () => {
+                phaseDataRef.set(phaseData).catch((error) => {
+                    console.error('Phase 데이터 저장 실패:', error);
+                });
+            };
+            
+            const loadPhaseData = () => {
+                phaseDataRef.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        phaseData = data;
+                        // 현재 학년의 phase 영역 업데이트
+                        updateAllPhaseAreas();
+                    }
+                }).catch((error) => {
+                    console.error('Phase 데이터 로딩 실패:', error);
+                });
+            };
+            
+            const getTodayDateString = () => {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            };
+
+            // 해당 학생이 현재 단계에서 조치가 필요한지 확인하는 함수
+            const checkStudentNeedsAction = (grade, classNum, studentNum, count) => {
+                // 7회 미만이면 조치 불필요
+                if (count < 7) {
+                    return false;
+                }
+                
+                if (!phaseData || !phaseData[grade]) {
+                    // phaseData가 없으면 조치되지 않은 것으로 간주
+                    return count >= 7;
+                }
+                
+                const gradePhaseData = phaseData[grade];
+                const studentInfo = grade + '학년 ' + classNum + '반 ' + studentNum + '번';
+                
+                // 각 단계별 조치 여부 확인
+                const isInPhase1 = (gradePhaseData.phase1 || []).some(item => item.includes(studentInfo));
+                const isInPhase2 = (gradePhaseData.phase2 || []).some(item => item.includes(studentInfo));
+                const isInPhase3 = (gradePhaseData.phase3 || []).some(item => item.includes(studentInfo));
+                
+                // 단계별 조치 필요성 판단
+                if (count >= 15) {
+                    // 15회 이상: 3차 조치가 필요하지만 아직 3차에 없는 경우
+                    return !isInPhase3;
+                } else if (count >= 12) {
+                    // 12회 이상: 2차 조치가 필요하지만 아직 2차에 없는 경우 (3차는 이미 처리됨을 의미)
+                    return !isInPhase2 && !isInPhase3;
+                } else if (count >= 7) {
+                    // 7회 이상: 1차 조치가 필요하지만 아직 1차에 없는 경우 (2차, 3차는 이미 처리됨을 의미)
+                    return !isInPhase1 && !isInPhase2 && !isInPhase3;
+                }
+                
+                return false;
+            };
+
+            const updateCellAppearance = (cell, count) => {
+                // 기본 클래스 및 스타일 제거
+                cell.className = 'data-cell';
+                cell.style.cssText = '';
+                
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                
+                // 해당 학생이 조치가 필요한지 확인 (7회 이상이면서 아직 조치되지 않은 경우)
+                const needsAction = checkStudentNeedsAction(grade, classNum, studentNum, count);
+                
+                if (count === 0) {
+                    cell.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)';
+                    cell.style.color = '#64748b';
+                } else if (count <= 7) {
+                    cell.style.background = 'linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%)';
+                    cell.style.color = '#92400e';
+                    cell.style.boxShadow = '0 4px 12px rgba(251, 191, 36, 0.3)';
+                } else if (count <= 12) {
+                    cell.style.background = 'linear-gradient(135deg, #fed7aa 0%, #fb923c 100%)';
+                    cell.style.color = '#ea580c';
+                    cell.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
+                } else if (count <= 15) {
+                    cell.style.background = 'linear-gradient(135deg, #fecaca 0%, #f87171 100%)';
+                    cell.style.color = '#ffffff';
+                    cell.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                } else {
+                    cell.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
+                    cell.style.color = '#ffffff';
+                    cell.style.boxShadow = '0 6px 16px rgba(185, 28, 28, 0.5)';
+                    cell.style.transform = 'scale(1.02)';
+                }
+                
+                // 조치가 필요한 학생인 경우 초록 테두리 표시 (체크마크 없이)
+                if (needsAction) {
+                    cell.style.border = '3px solid #10b981';
+                    cell.style.position = 'relative';
+                }
+            };
+            
+            const updateTableFromData = (grade) => {
+                const table = document.querySelector('#counter-table-grade' + grade);
+                if (!table) return;
+                
+                table.querySelectorAll('.data-cell').forEach(cell => {
+                    const gradeNum = cell.getAttribute('data-grade');
+                    const classNum = cell.getAttribute('data-class');
+                    const studentNum = cell.getAttribute('data-student');
+                    const key = gradeNum + '-' + classNum + '-' + studentNum;
+                    const violations = studentData[key] || [];
+                    
+                    const count = violations.length;
+                    cell.textContent = count;
+                    updateCellAppearance(cell, count);
+                });
+            };
+
+            const createTable = (grade, numClasses, numStudents) => {
+                const table = document.querySelector('#counter-table-grade' + grade);
+                const tableHeadRow = table.querySelector('thead tr');
+                const tableBody = table.querySelector('tbody');
+                
+                tableHeadRow.innerHTML = '<th class="class-header-cell">반</th>';
+                tableBody.innerHTML = '';
+                
+                for (let i = 1; i <= numStudents; i++) {
+                    const th = document.createElement('th');
+                    const div = document.createElement('div');
+                    div.textContent = i;
+                    div.className = 'student-header-cell';
+                    th.appendChild(div);
+                    tableHeadRow.appendChild(th);
+                }
+                
+                for (let i = 1; i <= numClasses; i++) {
+                    const tr = document.createElement('tr');
+                    const classLabelTh = document.createElement('th');
+                    const classLabelDiv = document.createElement('div');
+                    classLabelDiv.textContent = i + '반';
+                    classLabelDiv.className = 'class-header-cell';
+                    classLabelTh.appendChild(classLabelDiv);
+                    tr.appendChild(classLabelTh);
+                    
+                    for (let j = 1; j <= numStudents; j++) {
+                        const td = document.createElement('td');
+                        const studentBox = document.createElement('div');
+                        studentBox.textContent = '0';
+                        studentBox.className = 'data-cell';
+                        studentBox.setAttribute('data-grade', grade);
+                        studentBox.setAttribute('data-class', i);
+                        studentBox.setAttribute('data-student', j);
+                        
+                        studentBox.addEventListener('click', openModal);
+                        studentBox.addEventListener('contextmenu', openHistoryModal);
+                        studentBox.addEventListener('mouseenter', highlightRowCol);
+                        studentBox.addEventListener('mouseleave', removeHighlight);
+                        
+                        // 드래그 기능 추가
+                        studentBox.setAttribute('draggable', 'true');
+                        studentBox.addEventListener('dragstart', handleDragStart);
+                        studentBox.addEventListener('dragend', handleDragEnd);
+                        
+                        td.appendChild(studentBox);
+                        tr.appendChild(td);
+                    }
+                    tableBody.appendChild(tr);
+                }
+            };
+
+            const openModal = (event) => {
+                const cell = event.currentTarget;
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                
+                if (!grade || !classNum || !studentNum) return;
+                
+                currentStudentInfo = { grade: grade, classNum: classNum, studentNum: studentNum };
+                modalTitle.textContent = grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생';
+
+                document.querySelectorAll('.violation-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    const noteInput = document.getElementById(cb.dataset.noteTarget);
+                    if(noteInput) {
+                        noteInput.classList.add('hidden');
+                        noteInput.value = '';
+                    }
+                });
+                
+                checklistStep.classList.remove('hidden');
+                dateStep.classList.add('hidden');
+                studentModal.classList.remove('hidden');
+            };
+
+            const closeModal = () => {
+                studentModal.classList.add('hidden');
+            };
+
+            const handleNextClick = () => {
+                tempCheckedItems = [];
+                document.querySelectorAll('.violation-checkbox').forEach(checkbox => {
+                    if (checkbox.checked) {
+                        const noteInput = document.getElementById(checkbox.dataset.noteTarget);
+                        tempCheckedItems.push({
+                            name: checkbox.nextElementSibling.textContent,
+                            note: noteInput.value || ''
+                        });
+                    }
+                });
+                checklistStep.classList.add('hidden');
+                dateStep.classList.remove('hidden');
+                dateInput.value = getTodayDateString();
+            };
+
+            const handleBackClick = () => {
+                dateStep.classList.add('hidden');
+                checklistStep.classList.remove('hidden');
+            };
+            
+            const saveFinalData = () => {
+                const grade = currentStudentInfo.grade;
+                const classNum = currentStudentInfo.classNum;
+                const studentNum = currentStudentInfo.studentNum;
+                if (!grade || !classNum || !studentNum) return;
+
+                const key = grade + '-' + classNum + '-' + studentNum;
+                const selectedDate = dateInput.value;
+
+                if (!selectedDate || tempCheckedItems.length === 0) {
+                    closeModal();
+                    return;
+                }
+
+                const newViolation = {
+                    date: selectedDate,
+                    items: tempCheckedItems
+                };
+                
+                const violations = studentData[key] || [];
+                violations.push(newViolation);
+                studentData[key] = violations;
+
+                saveData();
+                updateTableFromData(grade);
+                closeModal();
+            };
+            
+            const handleDeleteViolation = (event) => {
+                const key = historyModal.dataset.currentKey;
+                const index = parseInt(event.target.dataset.index, 10);
+                
+                if (studentData[key] && studentData[key][index]) {
+                     showConfirmation('이 기록을 정말 삭제하시겠습니까?', () => {
+                        studentData[key].splice(index, 1);
+                        if (studentData[key].length === 0) {
+                            delete studentData[key];
+                        }
+                        saveData();
+                        updateTableFromData(currentGrade);
+                        renderHistoryList(key);
+                        confirmModal.classList.add('hidden');
+                    });
+                }
+            };
+
+            const renderHistoryList = (key) => {
+                historyList.innerHTML = '';
+                const violations = studentData[key] || [];
+
+                if (violations.length === 0) {
+                    historyList.innerHTML = '<p class="text-gray-500 text-center">기록이 없습니다.</p>';
+                } else {
+                    const sortedViolations = violations.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    sortedViolations.forEach((violation, index) => {
+                        const originalIndex = violations.indexOf(violation);
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'border-b pb-3';
+
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'flex justify-between items-center mb-1';
+                        
+                        const dateP = document.createElement('p');
+                        dateP.className = 'font-semibold text-gray-800';
+                        dateP.textContent = violation.date;
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.innerHTML = '&times;';
+                        deleteBtn.className = 'delete-violation-btn text-red-500 hover:text-red-700 font-bold text-xl px-2';
+                        deleteBtn.dataset.index = originalIndex;
+
+                        headerDiv.appendChild(dateP);
+                        headerDiv.appendChild(deleteBtn);
+                        itemDiv.appendChild(headerDiv);
+                        
+                        const itemsContainer = document.createElement('div');
+                        itemsContainer.className = 'space-y-1 pl-2';
+                        
+                        violation.items.forEach(itemObject => {
+                            const detailDiv = document.createElement('div');
+                            let content = '<span class="font-medium text-gray-700">• ' + itemObject.name + '</span>';
+                            if (itemObject.note) {
+                                content += '<p class="pl-4 text-sm text-gray-500">' + itemObject.note + '</p>';
+                            }
+                            detailDiv.innerHTML = content;
+                            itemsContainer.appendChild(detailDiv);
+                        });
+
+                        itemDiv.appendChild(itemsContainer);
+                        historyList.appendChild(itemDiv);
+                    });
+
+                    document.querySelectorAll('.delete-violation-btn').forEach(btn => {
+                        btn.addEventListener('click', handleDeleteViolation);
+                    });
+                }
+            };
+            
+            const openHistoryModal = (event) => {
+                event.preventDefault();
+                const cell = event.currentTarget;
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                const key = grade + '-' + classNum + '-' + studentNum;
+
+                historyModalTitle.textContent = grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생 기록';
+                historyModal.dataset.currentKey = key;
+                
+                renderHistoryList(key);
+                historyModal.classList.remove('hidden');
+            };
+
+            const closeHistoryModal = () => {
+                historyModal.classList.add('hidden');
+            };
+
+            const showConfirmation = (message, onConfirm) => {
+                confirmMessage.textContent = message;
+                confirmCallback = onConfirm;
+                confirmModal.classList.remove('hidden');
+            };
+
+            const highlightRowCol = (event) => {
+                const cell = event.currentTarget;
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                
+                const table = document.querySelector('#counter-table-grade' + grade);
+                if (!table) return;
+                
+                // 행 하이라이트 (해당 반의 모든 학생)
+                table.querySelectorAll('[data-class="' + classNum + '"]').forEach(c => {
+                    if (c.classList.contains('data-cell')) {
+                        c.classList.add('highlight-row');
+                    }
+                });
+                
+                // 열 하이라이트 (해당 번호의 모든 반)
+                table.querySelectorAll('[data-student="' + studentNum + '"]').forEach(c => {
+                    if (c.classList.contains('data-cell')) {
+                        c.classList.add('highlight-col');
+                    }
+                });
+                
+                // 반 헤더 하이라이트
+                table.querySelectorAll('.class-header-cell').forEach(header => {
+                    if (header.textContent === classNum + '반') {
+                        header.classList.add('highlight-row');
+                    }
+                });
+                
+                // 학생 헤더 하이라이트
+                const studentHeaders = table.querySelectorAll('.student-header-cell');
+                if (studentHeaders[parseInt(studentNum) - 1]) {
+                    studentHeaders[parseInt(studentNum) - 1].classList.add('highlight-col');
+                }
+            };
+
+            const removeHighlight = (event) => {
+                const cell = event.currentTarget;
+                const grade = cell.getAttribute('data-grade');
+                const table = document.querySelector('#counter-table-grade' + grade);
+                if (!table) return;
+                
+                table.querySelectorAll('.highlight-row, .highlight-col').forEach(c => {
+                    c.classList.remove('highlight-row', 'highlight-col');
+                });
+            };
+
+            const switchGrade = (grade) => {
+                currentGrade = grade;
+                
+                document.querySelectorAll('.grade-tab').forEach(tab => {
+                    if (tab.dataset.grade == grade) {
+                        tab.className = 'grade-tab active';
+                    } else {
+                        tab.className = 'grade-tab';
+                    }
+                });
+                
+                document.querySelectorAll('.grade-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById('grade' + grade + 'Content').classList.add('active');
+                
+                updateTableFromData(grade);
+                updateAllPhaseAreas(); // Phase 영역도 업데이트
+            };
+
+            // 드래그 앤 드롭 관련 함수들
+            const handleDragStart = (event) => {
+                const cell = event.currentTarget;
+                cell.classList.add('dragging');
+                
+                const grade = cell.getAttribute('data-grade');
+                const classNum = cell.getAttribute('data-class');
+                const studentNum = cell.getAttribute('data-student');
+                const key = grade + '-' + classNum + '-' + studentNum;
+                const violations = studentData[key] || [];
+                const count = violations.length;
+                
+                const dragData = {
+                    grade: grade,
+                    classNum: classNum,
+                    studentNum: studentNum,
+                    count: count
+                };
+                
+                event.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                event.dataTransfer.effectAllowed = 'copy';
+            };
+
+            const handleDragEnd = (event) => {
+                event.currentTarget.classList.remove('dragging');
+            };
+
+            const handleDragOver = (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                dropZone.classList.add('drag-over');
+            };
+
+            const handleDragLeave = (event) => {
+                if (!dropZone.contains(event.relatedTarget)) {
+                    dropZone.classList.remove('drag-over');
+                }
+            };
+
+            const handleDrop = (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('drag-over');
+                dropZone.classList.add('drop-success');
+                
+                setTimeout(() => {
+                    dropZone.classList.remove('drop-success');
+                }, 600);
+
+                try {
+                    const dragData = JSON.parse(event.dataTransfer.getData('text/plain'));
+                    const { grade, classNum, studentNum, count } = dragData;
+                    
+                    const message = grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생이 약속이행서 ' + count + '장을 받았습니다.';
+                    messageList.push(message);
+                    updateMessageArea();
+                    
+                } catch (error) {
+                    console.error('드롭 데이터 처리 오류:', error);
+                }
+            };
+            
+            const handleActionDragOver = (event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+                actionDropZone.classList.add('drag-over');
+            };
+
+            const handleActionDragLeave = (event) => {
+                if (!actionDropZone.contains(event.relatedTarget)) {
+                    actionDropZone.classList.remove('drag-over');
+                }
+            };
+
+            const handleActionDrop = (event) => {
+                event.preventDefault();
+                actionDropZone.classList.remove('drag-over');
+                actionDropZone.classList.add('drop-success');
+                
+                setTimeout(() => {
+                    actionDropZone.classList.remove('drop-success');
+                }, 600);
+
+                try {
+                    const dragData = JSON.parse(event.dataTransfer.getData('text/plain'));
+                    const { grade, classNum, studentNum, count } = dragData;
+                    
+                    let phaseNum = 0;
+                    let actionType = '';
+                    let reason = '';
+                    
+                    if (count >= 7 && count < 12) {
+                        phaseNum = 1;
+                        actionType = '1일 청소';
+                        reason = '7회 도달';
+                    } else if (count >= 12 && count < 15) {
+                        phaseNum = 2;
+                        actionType = '3일 청소';
+                        reason = '12회 도달';
+                    } else if (count >= 15) {
+                        phaseNum = 3;
+                        actionType = '7일 청소';
+                        reason = '15회 도달';
+                    } else {
+                        showToast('아직 청소 조치 대상이 아닙니다. (7회 이상 필요)');
+                        return;
+                    }
+                    
+                    // 기존 청소 조치 기록에 추가
+                    const today = getTodayDateString();
+                    const key = grade + '-' + classNum + '-' + studentNum;
+                    
+                    if (!actionRecords[key]) {
+                        actionRecords[key] = [];
+                    }
+                    
+                    const newRecord = {
+                        date: today,
+                        type: actionType,
+                        reason: reason,
+                        count: count
+                    };
+                    
+                    actionRecords[key].push(newRecord);
+                    
+                    // 해당 phase 목록에도 추가 (날짜 포함, 학년별로 저장)
+                    const message = grade + '학년 ' + classNum + '반 ' + studentNum + '번 (' + count + '회) - ' + today;
+                    const gradeNum = parseInt(grade);
+                    const phaseKey = 'phase' + phaseNum;
+                    
+                    // phaseData 구조 확인 및 초기화
+                    if (!phaseData[gradeNum]) {
+                        phaseData[gradeNum] = { phase1: [], phase2: [], phase3: [] };
+                    }
+                    if (!phaseData[gradeNum][phaseKey]) {
+                        phaseData[gradeNum][phaseKey] = [];
+                    }
+                    
+                    if (!phaseData[gradeNum][phaseKey].includes(message)) {
+                        phaseData[gradeNum][phaseKey].push(message);
+                        savePhaseData(); // Firebase에 저장
+                        
+                        // 현재 보고 있는 학년이면 UI 업데이트
+                        if (gradeNum === currentGrade) {
+                            updatePhaseArea(phaseNum, phaseData[gradeNum][phaseKey], 
+                                phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
+                            );
+                        }
+                        
+                        // 테이블 업데이트 (조치 표시 갱신)
+                        updateTableFromData(gradeNum);
+                    }
+                    
+                    showToast(grade + '학년 ' + classNum + '반 ' + studentNum + '번이 ' + phaseNum + '차 조치로 분류되었습니다.');
+                    
+                } catch (error) {
+                    console.error('조치 드롭 데이터 처리 오류:', error);
+                }
+            };
+
+            const updateMessageArea = () => {
+                if (messageList.length === 0) {
+                    dropZoneContent.style.display = 'block';
+                    messageArea.style.display = 'none';
+                    copyBtn.disabled = true;
+                    clearBtn.disabled = true;
+                } else {
+                    dropZoneContent.style.display = 'none';
+                    messageArea.style.display = 'block';
+                    const messageContent = messageList.join('\n');
+                    messageArea.innerHTML = '<div class="message-content">' + messageContent + '</div>';
+                    copyBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }
+            };
+            
+            
+            const updatePhaseArea = (phaseNum, phaseList, phaseArea) => {
+                // phaseList가 undefined이거나 null인 경우 빈 배열로 처리
+                const safePhaseList = phaseList || [];
+                
+                if (safePhaseList.length === 0) {
+                    phaseArea.innerHTML = '<div class="empty-message text-xs">' + phaseNum + '차 조치 대상 없음</div>';
+                } else {
+                    let content = '<div class="space-y-1">';
+                    safePhaseList.forEach((item, index) => {
+                        content += '<div class="flex justify-between items-center bg-white border border-gray-200 rounded px-2 py-1">';
+                        content += '<span class="text-xs flex-1 mr-2">' + item + '</span>';
+                        content += '<div class="flex space-x-1">';
+                        content += '<button class="edit-phase-btn text-blue-500 hover:text-blue-700 text-xs" data-phase="' + phaseNum + '" data-index="' + index + '">✏️</button>';
+                        content += '<button class="delete-phase-btn text-red-500 hover:text-red-700 text-xs" data-phase="' + phaseNum + '" data-index="' + index + '">🗑️</button>';
+                        content += '</div>';
+                        content += '</div>';
+                    });
+                    content += '</div>';
+                    
+                    phaseArea.innerHTML = content;
+                    
+                    // 이벤트 리스너 추가
+                    phaseArea.querySelectorAll('.edit-phase-btn').forEach(btn => {
+                        btn.addEventListener('click', handleEditPhase);
+                    });
+                    phaseArea.querySelectorAll('.delete-phase-btn').forEach(btn => {
+                        btn.addEventListener('click', handleDeletePhase);
+                    });
+                }
+            };
+            
+            const updateAllPhaseAreas = () => {
+                if (!phaseData || !phaseData[currentGrade]) {
+                    // 데이터가 아직 로드되지 않은 경우 기본값으로 초기화
+                    if (!phaseData) phaseData = {};
+                    if (!phaseData[currentGrade]) {
+                        phaseData[currentGrade] = { phase1: [], phase2: [], phase3: [] };
+                    }
+                }
+                
+                const currentPhaseData = phaseData[currentGrade];
+                updatePhaseArea(1, currentPhaseData.phase1, phase1Area);
+                updatePhaseArea(2, currentPhaseData.phase2, phase2Area);
+                updatePhaseArea(3, currentPhaseData.phase3, phase3Area);
+            };
+
+            const handleCopy = async () => {
+                if (messageList.length === 0) return;
+                
+                const textToCopy = messageList.join('\n');
+                
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast('메시지가 클립보드에 복사되었습니다!');
+                } catch (error) {
+                    // 클립보드 API 실패 시 fallback
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textToCopy;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        showToast('메시지가 클립보드에 복사되었습니다!');
+                    } catch (fallbackError) {
+                        showToast('복사에 실패했습니다. 수동으로 복사해주세요.');
+                    }
+                    
+                    document.body.removeChild(textArea);
+                }
+            };
+
+            const handleClear = () => {
+                if (messageList.length === 0) return;
+                
+                showConfirmation('메시지를 모두 삭제하시겠습니까?', () => {
+                    messageList.length = 0;
+                    updateMessageArea();
+                    showToast('메시지가 초기화되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            const handleActionCopy = async () => {
+                // 현재 학년의 모든 phase 목록을 합쳐서 복사
+                const currentPhaseData = phaseData[currentGrade];
+                let allPhases = [];
+                
+                if (currentPhaseData.phase1.length > 0) {
+                    allPhases.push('1차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase1);
+                    allPhases.push('');
+                }
+                if (currentPhaseData.phase2.length > 0) {
+                    allPhases.push('2차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase2);
+                    allPhases.push('');
+                }
+                if (currentPhaseData.phase3.length > 0) {
+                    allPhases.push('3차 조치 대상자:');
+                    allPhases.push(...currentPhaseData.phase3);
+                    allPhases.push('');
+                }
+                
+                if (allPhases.length === 0) {
+                    showToast('복사할 조치 목록이 없습니다.');
+                    return;
+                }
+                
+                const textToCopy = currentGrade + '학년 조치 목록:\n\n' + allPhases.join('\n').trim();
+                
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    showToast(currentGrade + '학년 조치 목록이 클립보드에 복사되었습니다!');
+                } catch (error) {
+                    console.error('복사 오류:', error);
+                    showToast('복사에 실패했습니다.');
+                }
+            };
+
+            const handleActionClear = () => {
+                const currentPhaseData = phaseData[currentGrade];
+                const hasData = currentPhaseData.phase1.length > 0 || currentPhaseData.phase2.length > 0 || currentPhaseData.phase3.length > 0;
+                if (!hasData) return;
+                
+                showConfirmation(currentGrade + '학년 모든 조치 목록을 삭제하시겠습니까?', () => {
+                    currentPhaseData.phase1.length = 0;
+                    currentPhaseData.phase2.length = 0;
+                    currentPhaseData.phase3.length = 0;
+                    savePhaseData(); // Firebase에 저장
+                    
+                    updateAllPhaseAreas();
+                    
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
+                    
+                    showToast(currentGrade + '학년 모든 조치 목록이 초기화되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            
+            const handleEditPhase = (event) => {
+                const phaseNum = parseInt(event.target.dataset.phase);
+                const index = parseInt(event.target.dataset.index);
+                
+                const currentPhaseData = phaseData[currentGrade];
+                const phaseKey = 'phase' + phaseNum;
+                const item = currentPhaseData[phaseKey][index];
+                
+                // "1학년 3반 5번 (8회) - 2025-09-09" 형식에서 정보 추출
+                const parts = item.split(' - ');
+                const studentInfo = parts[0];
+                const currentDate = parts[1];
+                
+                currentEditPhase = phaseNum;
+                currentEditPhaseIndex = index;
+                
+                phaseEditStudentInfo.textContent = studentInfo;
+                phaseEditDate.value = currentDate;
+                phaseEditLevel.textContent = phaseNum + '차 조치';
+                
+                phaseEditModal.classList.remove('hidden');
+            };
+            
+            const handleDeletePhase = (event) => {
+                const phaseNum = parseInt(event.target.dataset.phase);
+                const index = parseInt(event.target.dataset.index);
+                
+                const currentPhaseData = phaseData[currentGrade];
+                const phaseKey = 'phase' + phaseNum;
+                const item = currentPhaseData[phaseKey][index];
+                const studentInfo = item.split(' - ')[0];
+                
+                showConfirmation(studentInfo + '의 ' + phaseNum + '차 조치를 삭제하시겠습니까?', () => {
+                    currentPhaseData[phaseKey].splice(index, 1);
+                    savePhaseData(); // Firebase에 저장
+                    updatePhaseArea(phaseNum, currentPhaseData[phaseKey],
+                        phaseNum === 1 ? phase1Area : (phaseNum === 2 ? phase2Area : phase3Area)
+                    );
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
+                    showToast(phaseNum + '차 조치가 삭제되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            const closePhaseEditModal = () => {
+                phaseEditModal.classList.add('hidden');
+                currentEditPhase = 0;
+                currentEditPhaseIndex = -1;
+            };
+            
+            const savePhaseEdit = () => {
+                if (currentEditPhase > 0 && currentEditPhaseIndex >= 0) {
+                    const currentPhaseData = phaseData[currentGrade];
+                    const phaseKey = 'phase' + currentEditPhase;
+                    const item = currentPhaseData[phaseKey][currentEditPhaseIndex];
+                    const studentInfo = item.split(' - ')[0];
+                    const newDate = phaseEditDate.value;
+                    
+                    currentPhaseData[phaseKey][currentEditPhaseIndex] = studentInfo + ' - ' + newDate;
+                    savePhaseData(); // Firebase에 저장
+                    
+                    updatePhaseArea(currentEditPhase, currentPhaseData[phaseKey],
+                        currentEditPhase === 1 ? phase1Area : (currentEditPhase === 2 ? phase2Area : phase3Area)
+                    );
+                    
+                    // 테이블 업데이트 (조치 표시 갱신)
+                    updateTableFromData(currentGrade);
+                    
+                    showToast('조치 날짜가 수정되었습니다.');
+                    closePhaseEditModal();
+                }
+            };
+            
+            const handleEditAction = (event) => {
+                const key = event.target.dataset.key;
+                const index = parseInt(event.target.dataset.index);
+                const record = actionRecords[key][index];
+                
+                const keyParts = key.split('-');
+                const grade = keyParts[0];
+                const classNum = keyParts[1];
+                const studentNum = keyParts[2];
+                
+                currentEditKey = key;
+                currentEditIndex = index;
+                
+                actionEditStudentInfo.textContent = grade + '학년 ' + classNum + '반 ' + studentNum + '번';
+                actionEditDate.value = record.date;
+                actionEditReason.textContent = record.reason;
+                
+                actionEditModal.classList.remove('hidden');
+            };
+            
+            const handleDeleteAction = (event) => {
+                const key = event.target.dataset.key;
+                const index = parseInt(event.target.dataset.index);
+                
+                const keyParts = key.split('-');
+                const grade = keyParts[0];
+                const classNum = keyParts[1];
+                const studentNum = keyParts[2];
+                
+                showConfirmation(grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생의 이 청소 기록을 삭제하시겠습니까?', () => {
+                    actionRecords[key].splice(index, 1);
+                    if (actionRecords[key].length === 0) {
+                        delete actionRecords[key];
+                    }
+                    updateActionArea();
+                    showToast('청소 기록이 삭제되었습니다.');
+                    confirmModal.classList.add('hidden');
+                });
+            };
+            
+            const closeActionEditModal = () => {
+                actionEditModal.classList.add('hidden');
+                currentEditKey = '';
+                currentEditIndex = -1;
+            };
+            
+            const saveActionEdit = () => {
+                if (currentEditKey && currentEditIndex >= 0) {
+                    actionRecords[currentEditKey][currentEditIndex].date = actionEditDate.value;
+                    updateActionArea();
+                    showToast('청소 기록이 수정되었습니다.');
+                    closeActionEditModal();
+                }
+            };
+
+
+            // 토스트 메시지 표시
+            const showToast = (message) => {
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #10b981;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    animation: slideIn 0.3s ease;
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            };
+
+            const init = () => {
+                Object.keys(gradeConfig).forEach(grade => {
+                    const config = gradeConfig[grade];
+                    createTable(parseInt(grade), config.classes, config.students);
+                });
+
+                createChecklistItems();
+                loadData();
+                loadPhaseData();
+                
+                // 실시간 데이터 동기화 설정
+                studentDataRef.on('value', (snapshot) => {
+                    const newData = snapshot.val() || {};
+                    // 데이터가 변경되었을 때만 업데이트
+                    if (JSON.stringify(studentData) !== JSON.stringify(newData)) {
+                        studentData = newData;
+                        // 현재 보고 있는 학년과 모든 학년 테이블 업데이트
+                        Object.keys(gradeConfig).forEach(grade => {
+                            updateTableFromData(parseInt(grade));
+                        });
+                    }
+                });
+                
+                // Phase 데이터 실시간 동기화 설정
+                phaseDataRef.on('value', (snapshot) => {
+                    const newPhaseData = snapshot.val();
+                    if (newPhaseData && JSON.stringify(phaseData) !== JSON.stringify(newPhaseData)) {
+                        phaseData = newPhaseData;
+                        updateAllPhaseAreas();
+                        // 테이블 업데이트 (조치 표시 갱신)
+                        updateTableFromData(currentGrade);
+                    }
+                });
+                
+                switchGrade(1);
+
+                document.querySelectorAll('.grade-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const grade = parseInt(tab.dataset.grade);
+                        switchGrade(grade);
+                    });
+                });
+                
+                
+                nextBtn.addEventListener('click', handleNextClick);
+                backBtn.addEventListener('click', handleBackClick);
+                finalSaveBtn.addEventListener('click', saveFinalData);
+                cancelBtn.addEventListener('click', closeModal);
+                
+                historyCloseBtn.addEventListener('click', closeHistoryModal);
+
+                historyResetBtn.addEventListener('click', () => {
+                    const key = historyModal.dataset.currentKey;
+                    const keyParts = key.split('-');
+                    const grade = keyParts[0];
+                    const classNum = keyParts[1];
+                    const studentNum = keyParts[2];
+                    showConfirmation(grade + '학년 ' + classNum + '반 ' + studentNum + '번 학생의 기록을 모두 삭제하시겠습니까?', () => {
+                        delete studentData[key];
+                        saveData();
+                        updateTableFromData(currentGrade);
+                        closeHistoryModal();
+                        confirmModal.classList.add('hidden');
+                    });
+                });
+
+                confirmResetBtn.addEventListener('click', () => {
+                    if (typeof confirmCallback === 'function') {
+                        confirmCallback();
+                    }
+                });
+                confirmCancelBtn.addEventListener('click', () => confirmModal.classList.add('hidden'));
+                
+                // 청소 기록 수정 모달 이벤트 리스너
+                actionEditCancelBtn.addEventListener('click', closeActionEditModal);
+                actionEditSaveBtn.addEventListener('click', saveActionEdit);
+                
+                // Phase 수정 모달 이벤트 리스너
+                phaseEditCancelBtn.addEventListener('click', closePhaseEditModal);
+                phaseEditSaveBtn.addEventListener('click', savePhaseEdit);
+
+                // 드래그 앤 드롭 이벤트 리스너
+                dropZone.addEventListener('dragover', handleDragOver);
+                dropZone.addEventListener('dragleave', handleDragLeave);
+                dropZone.addEventListener('drop', handleDrop);
+                
+                // 청소 조치 드래그 앤 드롭 이벤트 리스너
+                actionDropZone.addEventListener('dragover', handleActionDragOver);
+                actionDropZone.addEventListener('dragleave', handleActionDragLeave);
+                actionDropZone.addEventListener('drop', handleActionDrop);
+                
+                // 복사 및 초기화 버튼 이벤트 리스너
+                copyBtn.addEventListener('click', handleCopy);
+                clearBtn.addEventListener('click', handleClear);
+                actionCopyBtn.addEventListener('click', handleActionCopy);
+                actionClearBtn.addEventListener('click', handleActionClear);
+                
+                // 초기 메시지 영역 상태 설정
+                updateMessageArea();
+                
+                // 초기 Phase 영역 상태 설정
+                updateAllPhaseAreas();
+
+            };
+
+            init();
+        });
+    </script>
+</body>
+</html>
