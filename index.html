@@ -529,9 +529,15 @@
                     <input type="text" id="firebaseProjectId" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="Firebase Project ID를 입력하세요">
                 </div>
                 <div class="flex space-x-3">
+                    <button onclick="clearFirebaseSettings()" class="bg-red-500 text-white py-2 px-3 rounded-lg hover:bg-red-600 transition-colors text-sm">
+                        초기화
+                    </button>
                     <button onclick="saveFirebaseSettings()" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
                         연결하기
                     </button>
+                </div>
+                <div id="savedSettingsInfo" class="text-xs text-green-600 text-center hidden">
+                    ✅ 저장된 설정이 자동으로 불러와졌습니다.
                 </div>
                 <p class="text-xs text-gray-500 text-center">
                     Firebase Console에서 API Key와 Project ID를 확인할 수 있습니다.
@@ -826,9 +832,29 @@
             // 기존 설정 불러오기
             const apiKey = localStorage.getItem('firebaseApiKey');
             const projectId = localStorage.getItem('firebaseProjectId');
+            const savedSettingsInfo = document.getElementById('savedSettingsInfo');
 
-            if (apiKey) document.getElementById('firebaseApiKey').value = apiKey;
-            if (projectId) document.getElementById('firebaseProjectId').value = projectId;
+            if (apiKey && projectId) {
+                document.getElementById('firebaseApiKey').value = apiKey;
+                document.getElementById('firebaseProjectId').value = projectId;
+                savedSettingsInfo.classList.remove('hidden');
+            } else {
+                savedSettingsInfo.classList.add('hidden');
+            }
+        }
+
+        // 저장된 설정이 있는지 확인하고 자동으로 불러오기
+        function loadFirebaseSettingsFromStorage() {
+            const apiKey = localStorage.getItem('firebaseApiKey');
+            const projectId = localStorage.getItem('firebaseProjectId');
+
+            if (apiKey && projectId) {
+                // 설정 필드에 자동으로 입력
+                document.getElementById('firebaseApiKey').value = apiKey;
+                document.getElementById('firebaseProjectId').value = projectId;
+                return true;
+            }
+            return false;
         }
 
         function saveFirebaseSettings() {
@@ -854,7 +880,7 @@
                 const success = initializeFirebase();
                 if (success) {
                     document.getElementById('firebaseModal').style.display = 'none';
-                    alert('Firebase 설정이 완료되었습니다!');
+                    alert('Firebase 설정이 저장되고 연결되었습니다!\n다음 접속부터는 자동으로 연결됩니다.');
                     location.reload(); // 페이지 새로고침
                 }
             } catch (error) {
@@ -863,7 +889,27 @@
             }
         }
 
+        function clearFirebaseSettings() {
+            if (confirm('저장된 Firebase 설정을 삭제하시겠습니까?')) {
+                // localStorage에서 설정 삭제
+                localStorage.removeItem('firebaseApiKey');
+                localStorage.removeItem('firebaseProjectId');
+
+                // 입력 필드 초기화
+                document.getElementById('firebaseApiKey').value = '';
+                document.getElementById('firebaseProjectId').value = '';
+
+                // 저장된 설정 알림 숨기기
+                document.getElementById('savedSettingsInfo').classList.add('hidden');
+
+                alert('저장된 Firebase 설정이 삭제되었습니다.');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            // 저장된 Firebase 설정 불러오기
+            loadFirebaseSettingsFromStorage();
+
             // Firebase 초기화 먼저 시도
             if (!initializeFirebase()) {
                 return; // Firebase 설정이 없으면 설정 모달이 표시됨
